@@ -110,11 +110,12 @@ class Module {
      * Parse a JSON object into a Module.
      * 
      * @param {Object} json A JSON object representing a Module.
+     * @param {string} serverid The ID of the server to which this module belongs.
      * 
      * @returns {Module} The parsed Module.
      */
-    static fromJSON(json){
-        return new Module(json.id, json.name, json.type, json.required, json.artifact, json.subModules)
+    static fromJSON(json, serverid){
+        return new Module(json.id, json.name, json.type, json.required, json.artifact, json.subModules, serverid)
     }
 
     /**
@@ -139,15 +140,15 @@ class Module {
         }
     }
 
-    constructor(id, name, type, required, artifact, subModules) {
+    constructor(id, name, type, required, artifact, subModules, serverid) {
         this.identifier = id
         this.type = type
         this._resolveMetaData()
         this.name = name
         this.required = Required.fromJSON(required)
         this.artifact = Artifact.fromJSON(artifact)
-        this._resolveArtifactPath(artifact.path)
-        this._resolveSubModules(subModules)
+        this._resolveArtifactPath(artifact.path, serverid)
+        this._resolveSubModules(subModules, serverid)
     }
 
     _resolveMetaData(){
@@ -155,7 +156,7 @@ class Module {
 
             const m0 = this.identifier.split('@')
 
-            this.artifactExt = '.' + (m0[1] || Module._resolveDefaultExtension(this.type))
+            this.artifactExt = m0[1] || Module._resolveDefaultExtension(this.type)
 
             const m1 = m0[0].split(':')
 
@@ -169,37 +170,35 @@ class Module {
         }
     }
 
-    _resolveArtifactPath(artifactPath){
-        if(artifactPath == null){
-            const pth = path.join(...this.getGroup().split('.'), this.getID(), this.getVersion(), `${this.getID()}-${this.getVersion()}.${this.getExtension()}`)
-            
-            switch (this.type){
-                case exports.Types.Library:
-                case exports.Types.ForgeHosted:
-                case exports.Types.LiteLoader:
-                    this.artifact.path = path.join('libraries', pth)
-                    break
-                case exports.Types.ForgeMod:
-                case exports.Types.LiteMod:
-                    this.artifact.path = path.join('modstore', pth)
-                    break
-                case exports.Types.File:
-                default:
-                    this.artifact.path = pth
-                    break
-            }
+    _resolveArtifactPath(artifactPath, serverid){
+        const pth = artifactPath == null ? path.join(...this.getGroup().split('.'), this.getID(), this.getVersion(), `${this.getID()}-${this.getVersion()}.${this.getExtension()}`) : artifactPath
 
+        switch (this.type){
+            case exports.Types.Library:
+            case exports.Types.ForgeHosted:
+            case exports.Types.LiteLoader:
+                this.artifact.path = path.join(ConfigManager.getCommonDirectory(), 'libraries', pth)
+                break
+            case exports.Types.ForgeMod:
+            case exports.Types.LiteMod:
+                this.artifact.path = path.join(ConfigManager.getCommonDirectory(), 'modstore', pth)
+                break
+            case exports.Types.File:
+            default:
+                this.artifact.path = path.join(ConfigManager.getInstanceDirectory(), serverid, pth)
+                break
         }
+
     }
 
-    _resolveSubModules(json){
+    _resolveSubModules(json, serverid){
         const arr = []
         if(json != null){
             for(let sm of json){
-                arr.push(Module.fromJSON(sm))
+                arr.push(Module.fromJSON(sm, serverid))
             }
         }
-        this.subModules = arr
+        this.subModules = arr.length > 0 ? arr : null
     }
 
     /**
@@ -244,6 +243,10 @@ class Module {
         return this.artifactGroup
     }
 
+    getVersionlessID(){
+        return this.getGroup() + ':' + this.getID()
+    }
+
     /**
      * @returns {string} The version of this module's artifact.
      */
@@ -262,7 +265,7 @@ class Module {
      * @returns {boolean} Whether or not this module has sub modules.
      */
     hasSubModules(){
-        return this.subModules.length > 0
+        return this.subModules != null
     }
 
     /**
@@ -307,7 +310,7 @@ class Server {
     _resolveModules(json){
         const arr = []
         for(let m of json){
-            arr.push(Module.fromJSON(m))
+            arr.push(Module.fromJSON(m, this.getID()))
         }
         this.modules = arr
     }
@@ -406,6 +409,7 @@ class DistroIndex {
 
         const distro = Object.assign(new DistroIndex(), json)
         distro._resolveServers(servers)
+        distro._resolveMainServer()
 
         return distro
     }
@@ -416,6 +420,19 @@ class DistroIndex {
             arr.push(Server.fromJSON(s))
         }
         this.servers = arr
+    }
+
+    _resolveMainServer(){
+
+        for(let serv of this.servers){
+            if(serv.mainServer){
+                this.mainServer = serv.id
+                return
+            }
+        }
+
+        // If no server declares default_selected, default to the first one declared.
+        this.mainServer = (this.servers.length > 0) ? this.servers[0].getID() : null
     }
 
     /**
@@ -456,11 +473,21 @@ class DistroIndex {
         return null
     }
 
+    /**
+     * Get the main server.
+     * 
+     * @returns {Server} The main server.
+     */
+    getMainServer(){
+        return getServer(this.mainServer)
+    }
+
 }
 
 exports.Types = {
     Library: 'Library',
     ForgeHosted: 'ForgeHosted',
+    Forge: 'Forge', // Unimplemented
     LiteLoader: 'LiteLoader',
     ForgeMod: 'ForgeMod',
     LiteMod: 'LiteMod',
@@ -474,6 +501,9 @@ const DEV_PATH = path.join(ConfigManager.getLauncherDirectory(), 'dev_distributi
 
 let data = null
 
+/**
+ * @returns {Promise.<DistroIndex>}
+ */
 exports.pullRemote = function(){
     if(DEV_MODE){
         return exports.pullLocal()
@@ -504,6 +534,9 @@ exports.pullRemote = function(){
     })
 }
 
+/**
+ * @returns {Promise.<DistroIndex>}
+ */
 exports.pullLocal = function(){
     return new Promise((resolve, reject) => {
         fs.readFile(DEV_MODE ? DEV_PATH : DISTRO_PATH, 'utf-8', (err, d) => {
@@ -527,6 +560,9 @@ exports.setDevMode = function(value){
     DEV_MODE = value
 }
 
+/**
+ * @returns {DistroIndex}
+ */
 exports.getDistribution = function(){
     return data
 }

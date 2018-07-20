@@ -36,6 +36,9 @@ const request       = require('request')
 const tar           = require('tar-fs')
 const zlib          = require('zlib')
 
+const DistroManager = require('./distro')
+const ConfigManager = require('./configmanager')
+
 // Constants
 const PLATFORM_MAP = {
     win32: '-windows-x64.tar.gz',
@@ -207,60 +210,6 @@ class AssetGuard extends EventEmitter {
     // Static General Resolve Functions
     // #region
 
-    /**
-     * Resolve an artifact id into a path. For example, on windows
-     * 'net.minecraftforge:forge:1.11.2-13.20.0.2282', '.jar' becomes
-     * net\minecraftforge\forge\1.11.2-13.20.0.2282\forge-1.11.2-13.20.0.2282.jar
-     * 
-     * @param {string} artifactid The artifact id string.
-     * @param {string} extension The extension of the file at the resolved path.
-     * @returns {string} The resolved relative path from the artifact id.
-     */
-    static _resolvePath(artifactid, extension){
-        let ps = artifactid.split(':')
-        let cs = ps[0].split('.')
-
-        cs.push(ps[1])
-        cs.push(ps[2])
-        cs.push(ps[1].concat('-').concat(ps[2]).concat(extension))
-
-        return path.join.apply(path, cs)
-    }
-
-    /**
-     * Resolve an artifact id into a URL. For example,
-     * 'net.minecraftforge:forge:1.11.2-13.20.0.2282', '.jar' becomes
-     * net/minecraftforge/forge/1.11.2-13.20.0.2282/forge-1.11.2-13.20.0.2282.jar
-     * 
-     * @param {string} artifactid The artifact id string.
-     * @param {string} extension The extension of the file at the resolved url.
-     * @returns {string} The resolved relative URL from the artifact id.
-     */
-    static _resolveURL(artifactid, extension){
-        let ps = artifactid.split(':')
-        let cs = ps[0].split('.')
-
-        cs.push(ps[1])
-        cs.push(ps[2])
-        cs.push(ps[1].concat('-').concat(ps[2]).concat(extension))
-
-        return cs.join('/')
-    }
-
-    /**
-     * Resolves an artiface id without the version. For example,
-     * 'net.minecraftforge:forge:1.11.2-13.20.0.2282' becomes
-     * 'net.minecraftforge:forge'.
-     * 
-     * @param {string} artifactid The artifact id string.
-     * @returns {string} The resolved identifier without the version.
-     */
-    static _resolveWithoutVersion(artifactid){
-        let ps = artifactid.split(':')
-
-        return ps[0] + ':' + ps[1]
-    }
-
     // #endregion
 
     // Static Hash Validation Functions
@@ -386,145 +335,6 @@ class AssetGuard extends EventEmitter {
 
     // #endregion
 
-    // Static Distribution Index Functions
-    // #region
-
-    /**
-     * Retrieve a new copy of the distribution index from our servers.
-     * 
-     * @param {string} launcherPath The root launcher directory.
-     * @returns {Promise.<Object>} A promise which resolves to the distribution data object.
-     */
-    static refreshDistributionDataRemote(launcherPath){
-        return new Promise((resolve, reject) => {
-            const distroURL = 'http://mc.westeroscraft.com/WesterosCraftLauncher/westeroscraft.json'
-            const opts = {
-                url: distroURL,
-                timeout: 2500
-            }
-            const distroDest = path.join(launcherPath, 'westeroscraft.json')
-            request(opts, (error, resp, body) => {
-                if(!error){
-                    distributionData = JSON.parse(body)
-
-                    fs.writeFile(distroDest, body, 'utf-8', (err) => {
-                        if(!err){
-                            resolve(distributionData)
-                        } else {
-                            reject(err)
-                        }
-                    })
-                } else {
-                    reject(error)
-                }
-            })
-        })
-    }
-
-    /**
-     * Retrieve a local copy of the distribution index asynchronously.
-     * 
-     * @param {string} launcherPath The root launcher directory.
-     * @returns {Promise.<Object>} A promise which resolves to the distribution data object.
-     */
-    static refreshDistributionDataLocal(launcherPath){
-        return new Promise((resolve, reject) => {
-            fs.readFile(path.join(launcherPath, 'westeroscraft.json'), 'utf-8', (err, data) => {
-                if(!err){
-                    distributionData = JSON.parse(data)
-                    resolve(distributionData)
-                } else {
-                    reject(err)
-                }
-            })
-        })
-    }
-
-    /**
-     * Retrieve a local copy of the distribution index synchronously.
-     * 
-     * @param {string} launcherPath The root launcher directory.
-     * @returns {Object} The distribution data object.
-     */
-    static refreshDistributionDataLocalSync(launcherPath){
-        distributionData = JSON.parse(fs.readFileSync(path.join(launcherPath, 'westeroscraft.json'), 'utf-8'))
-        return distributionData
-    }
-
-    /**
-     * Get a cached copy of the distribution index.
-     */
-    static getDistributionData(){
-        return distributionData
-    }
-
-    /**
-     * Resolve the default selected server from the distribution index.
-     * 
-     * @returns {Object} An object resolving to the default selected server.
-     */
-    static resolveSelectedServer(){
-        const distro = AssetGuard.getDistributionData()
-        const servers = distro.servers
-        for(let i=0; i<servers.length; i++){
-            if(servers[i].default_selected){
-                return servers[i]
-            }
-        }
-        // If no server declares default_selected, default to the first one declared.
-        return (servers.length > 0) ? servers[0] : null
-    }
-
-    /**
-     * Gets a server from the distro index which maches the provided ID.
-     * Returns null if the ID could not be found or the distro index has
-     * not yet been loaded.
-     * 
-     * @param {string} serverID The id of the server to retrieve.
-     * @returns {Object} The server object whose id matches the parameter.
-     */
-    static getServerById(serverID){
-        const distro = AssetGuard.getDistributionData()
-        const servers = distro.servers
-        let serv = null
-        for(let i=0; i<servers.length; i++){
-            if(servers[i].id === serverID){
-                serv = servers[i]
-            }
-        }
-        return serv
-    }
-
-    /**
-     * Set whether or not we should launch with a local copy of the distribution
-     * index. This is useful for testing experimental changes to the distribution index.
-     * 
-     * @param {boolean} value True if we should launch with a local copy. Otherwise false. 
-     */
-    static launchWithLocal(value, silent = false){
-        if(!silent){
-            if(value){
-                console.log('%c[AssetGuard]', 'color: #a02d2a; font-weight: bold', 'Will now launch using a local copy of the distribution index.')
-                console.log('%c[AssetGuard]', 'color: #a02d2a; font-weight: bold', 'Unless you are a developer, revert this change immediately.')
-            } else {
-                console.log('%c[AssetGuard]', 'color: #a02d2a; font-weight: bold', 'Will now retrieve a fresh copy of the distribution index on launch.')
-            }
-        }
-        launchWithLocal = value
-    }
-
-    /**
-     * Check if AssetGuard is configured to launch with a local copy
-     * of the distribution index.
-     * 
-     * @returns {boolean} True if launching with local, otherwise false.
-     */
-    static isLocalLaunch(){
-        return launchWithLocal
-    }
-
-    // #endregion
-
     // Miscellaneous Static Functions
     // #region
 
@@ -537,8 +347,6 @@ class AssetGuard extends EventEmitter {
     static _extractPackXZ(filePaths, javaExecutable){
         console.log('[PackXZExtract] Starting')
         return new Promise((resolve, reject) => {
-
-            
 
             let libPath
             if(isDev){
@@ -1461,30 +1269,22 @@ class AssetGuard extends EventEmitter {
     /**
      * Validate the distribution.
      * 
-     * @param {string} serverpackid The id of the server to validate.
+     * @param {Server} server The Server to validate.
      * @returns {Promise.<Object>} A promise which resolves to the server distribution object.
      */
-    validateDistribution(serverpackid){
+    validateDistribution(server){
         const self = this
         return new Promise((resolve, reject) => {
-            AssetGuard.refreshDistributionDataLocal(self.launcherPath).then((v) => {
-                const serv = AssetGuard.getServerById(serverpackid)
-
-                if(serv == null) {
-                    console.error('Invalid server pack id:', serverpackid)
+            self.forge = self._parseDistroModules(server.getModules(), server.getMinecraftVersion(), server.getID())
+            // Correct our workaround here.
+            let decompressqueue = self.forge.callback
+            self.extractQueue = decompressqueue
+            self.forge.callback = (asset, self) => {
+                if(asset.type === DistroManager.Types.ForgeHosted || asset.type === DistroManager.Types.Forge){
+                    AssetGuard._finalizeForgeAsset(asset, self.commonPath).catch(err => console.log(err))
                 }
-
-                self.forge = self._parseDistroModules(serv.modules, serv.mc_version, serv.id)
-                // Correct our workaround here.
-                let decompressqueue = self.forge.callback
-                self.extractQueue = decompressqueue
-                self.forge.callback = (asset, self) => {
-                    if(asset.type === 'forge-hosted' || asset.type === 'forge'){
-                        AssetGuard._finalizeForgeAsset(asset, self.commonPath)
-                    }
-                }
-                resolve(serv)
-            })
+            }
+            resolve(server)
         })
     }
 
@@ -1492,27 +1292,11 @@ class AssetGuard extends EventEmitter {
         let alist = []
         let asize = 0;
         let decompressqueue = []
-        for(let i=0; i<modules.length; i++){
-            let ob = modules[i]
-            let obType = ob.type
-            let obArtifact = ob.artifact
-            let obPath = obArtifact.path == null ? AssetGuard._resolvePath(ob.id, obArtifact.extension) : obArtifact.path
-            switch(obType){
-                case 'forge-hosted':
-                case 'forge':
-                case 'liteloader':
-                case 'library':
-                    obPath = path.join(this.commonPath, 'libraries', obPath)
-                    break
-                case 'forgemod':
-                case 'litemod':
-                    obPath = path.join(this.commonPath, 'modstore', obPath)
-                    break
-                case 'file':
-                default: 
-                    obPath = path.join(this.instancePath, servid, obPath)
-            }
-            let artifact = new DistroModule(ob.id, obArtifact.MD5, obArtifact.size, obArtifact.url, obPath, obType)
+        for(let ob of modules){
+            let obType = ob.getType
+            let obArtifact = ob.getArtifact()
+            let obPath = obArtifact.getPath()
+            let artifact = new DistroModule(ob.getIdentifier(), obArtifact.getHash(), obArtifact.getSize(), obArtifact.getURL(), obPath, obType)
             const validationPath = obPath.toLowerCase().endsWith('.pack.xz') ? obPath.substring(0, obPath.toLowerCase().lastIndexOf('.pack.xz')) : obPath
             if(!AssetGuard._validateLocal(validationPath, 'MD5', artifact.hash)){
                 asize += artifact.size*1
@@ -1520,8 +1304,8 @@ class AssetGuard extends EventEmitter {
                 if(validationPath !== obPath) decompressqueue.push(obPath)
             }
             //Recursively process the submodules then combine the results.
-            if(ob.sub_modules != null){
-                let dltrack = this._parseDistroModules(ob.sub_modules, version, servid)
+            if(ob.getSubModules() != null){
+                let dltrack = this._parseDistroModules(ob.getSubModules(), version, servid)
                 asize += dltrack.dlsize*1
                 alist = alist.concat(dltrack.dlqueue)
                 decompressqueue = decompressqueue.concat(dltrack.callback)
@@ -1535,30 +1319,19 @@ class AssetGuard extends EventEmitter {
     /**
      * Loads Forge's version.json data into memory for the specified server id.
      * 
-     * @param {string} serverpack The id of the server to load Forge data for.
+     * @param {string} server The Server to load Forge data for.
      * @returns {Promise.<Object>} A promise which resolves to Forge's version.json data.
      */
-    loadForgeData(serverpack){
+    loadForgeData(server){
         const self = this
         return new Promise(async (resolve, reject) => {
-            let distro = AssetGuard.getDistributionData()
-            
-            const servers = distro.servers
-            let serv = null
-            for(let i=0; i<servers.length; i++){
-                if(servers[i].id === serverpack){
-                    serv = servers[i]
-                    break
-                }
-            }
-
-            const modules = serv.modules
-            for(let i=0; i<modules.length; i++){
-                const ob = modules[i]
-                if(ob.type === 'forge-hosted' || ob.type === 'forge'){
-                    let obArtifact = ob.artifact
-                    let obPath = obArtifact.path == null ? path.join(self.commonPath, 'libraries', AssetGuard._resolvePath(ob.id, obArtifact.extension)) : obArtifact.path
-                    let asset = new DistroModule(ob.id, obArtifact.MD5, obArtifact.size, obArtifact.url, obPath, ob.type)
+            const modules = server.getModules()
+            for(let ob of modules){
+                const type = ob.getType()
+                if(type === DistroManager.Types.ForgeHosted || type === DistroManager.Types.Forge){
+                    let obArtifact = ob.getArtifact()
+                    let obPath = obArtifact.getPath()
+                    let asset = new DistroModule(ob.getIdentifier(), obArtifact.getHash(), obArtifact.getSize(), obArtifact.getURL(), obPath, type)
                     let forgeData = await AssetGuard._finalizeForgeAsset(asset, self.commonPath)
                     resolve(forgeData)
                     return
@@ -1798,6 +1571,33 @@ class AssetGuard extends EventEmitter {
         if(shouldFire){
             this.emit('dlcomplete')
         }
+    }
+
+    async validateEverything(serverid){
+
+        ConfigManager.load()
+        const dI = await DistroManager.pullLocal()
+
+        const server = dI.getServer(serverid)
+
+        await this.validateDistribution(server)
+        this.emit('func', 'validateDistribution')
+        const versionData = await this.loadVersionData(server.getMinecraftVersion())
+        this.emit('func', 'loadVersionData')
+        await this.validateAssets(versionData)
+        this.emit('func', 'validateAssets')
+        await this.validateLibraries(versionData)
+        this.emit('func', 'validateLibraries')
+        await this.validateMiscellaneous(versionData)
+        this.emit('func', 'validateMiscellaneous')
+        this.processDlQueues()
+        const forgeData = await this.loadForgeData(server)
+    
+        return {
+            versionData,
+            forgeData
+        }
+
     }
 
     // #endregion

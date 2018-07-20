@@ -208,13 +208,13 @@ const refreshMojangStatuses = async function(){
 
 const refreshServerStatus = async function(fade = false){
     console.log('Refreshing Server Status')
-    const serv = AssetGuard.getServerById(ConfigManager.getSelectedServer())
+    const serv = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer())
 
     let pLabel = 'SERVER'
     let pVal = 'OFFLINE'
 
     try {
-        const serverURL = new URL('my://' + serv.server_ip)
+        const serverURL = new URL('my://' + serv.getAddress())
         const servStat = await ServerStatus.getStatus(serverURL.hostname, serverURL.port)
         if(servStat.online){
             pLabel = 'PLAYERS'
@@ -468,22 +468,16 @@ function dlAsync(login = true){
         if(m.content === 'validateDistribution'){
 
             setLaunchPercentage(20, 100)
-            serv = m.result
             console.log('Validated distibution index.')
 
-            // Begin version load.
             setLaunchDetails('Loading version information..')
-            aEx.send({task: 0, content: 'loadVersionData', argsArr: [serv.mc_version]})
 
         } else if(m.content === 'loadVersionData'){
 
             setLaunchPercentage(40, 100)
-            versionData = m.result
             console.log('Version data loaded.')
 
-            // Begin asset validation.
             setLaunchDetails('Validating asset integrity..')
-            aEx.send({task: 0, content: 'validateAssets', argsArr: [versionData]})
 
         } else if(m.content === 'validateAssets'){
 
@@ -495,9 +489,7 @@ function dlAsync(login = true){
                 setLaunchPercentage(60, 100)
                 console.log('Asset Validation Complete')
 
-                // Begin library validation.
                 setLaunchDetails('Validating library integrity..')
-                aEx.send({task: 0, content: 'validateLibraries', argsArr: [versionData]})
             }
 
         } else if(m.content === 'validateLibraries'){
@@ -505,18 +497,14 @@ function dlAsync(login = true){
             setLaunchPercentage(80, 100)
             console.log('Library validation complete.')
 
-            // Begin miscellaneous validation.
             setLaunchDetails('Validating miscellaneous file integrity..')
-            aEx.send({task: 0, content: 'validateMiscellaneous', argsArr: [versionData]})
 
         } else if(m.content === 'validateMiscellaneous'){
 
             setLaunchPercentage(100, 100)
             console.log('File validation complete.')
 
-            // Download queued files.
             setLaunchDetails('Downloading files..')
-            aEx.send({task: 0, content: 'processDlQueues'})
 
         } else if(m.content === 'dl'){
 
@@ -579,7 +567,6 @@ function dlAsync(login = true){
                 }
 
                 setLaunchDetails('Preparing to launch..')
-                aEx.send({task: 0, content: 'loadForgeData', argsArr: [serv.id]})
 
             } else {
 
@@ -587,9 +574,10 @@ function dlAsync(login = true){
 
             }
 
-        } else if(m.content === 'loadForgeData'){
+        } else if(m.content === 'validateEverything'){
 
-            forgeData = m.result
+            forgeData = m.result.forgeData
+            versionData = m.result.versionData
 
             if(login) {
                 //if(!(await AuthManager.validateSelected())){
@@ -632,7 +620,7 @@ function dlAsync(login = true){
                     proc.stdout.on('data', gameStateChange)
 
                     // Init Discord Hook
-                    const distro = AssetGuard.getDistributionData()
+                    const distro = DistroManager.getDistribution()
                     if(distro.discord != null && serv.discord != null){
                         DiscordWrapper.initRPC(distro.discord, serv.discord)
                         hasRPC = true
@@ -670,14 +658,22 @@ function dlAsync(login = true){
     // Validate Forge files.
     setLaunchDetails('Loading server information..')
 
-    if(AssetGuard.isLocalLaunch()){
-
-        refreshDistributionIndex(false, (data) => {
+    refreshDistributionIndex(true, (data) => {
+        onDistroRefresh(data)
+        serv = data.getServer(ConfigManager.getSelectedServer())
+        aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+        //aEx.send({task: 0, content: 'validateDistribution', argsArr: [data.getServer(ConfigManager.getSelectedServer())]})
+    }, (err) => {
+        
+        serv = data.getServer(ConfigManager.getSelectedServer())
+        aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+        /*refreshDistributionIndex(false, (data) => {
             onDistroRefresh(data)
-            aEx.send({task: 0, content: 'validateDistribution', argsArr: [ConfigManager.getSelectedServer()]})
+            aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+            //aEx.send({task: 0, content: 'validateDistribution', argsArr: [data.getServer(ConfigManager.getSelectedServer())]})
         }, (err) => {
             console.error('Unable to refresh distribution index.', err)
-            if(AssetGuard.getDistributionData() == null){
+            if(DistroManager.getDistribution() == null){
                 setOverlayContent(
                     'Fatal Error',
                     'Could not load a copy of the distribution index. See the console for more details.',
@@ -691,40 +687,11 @@ function dlAsync(login = true){
                 // Disconnect from AssetExec
                 aEx.disconnect()
             } else {
-                aEx.send({task: 0, content: 'validateDistribution', argsArr: [ConfigManager.getSelectedServer()]})
+                aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+                //aEx.send({task: 0, content: 'validateDistribution', argsArr: [DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer())]})
             }
-        })
-
-    } else {
-
-        refreshDistributionIndex(true, (data) => {
-            onDistroRefresh(data)
-            aEx.send({task: 0, content: 'validateDistribution', argsArr: [ConfigManager.getSelectedServer()]})
-        }, (err) => {
-            refreshDistributionIndex(false, (data) => {
-                onDistroRefresh(data)
-            }, (err) => {
-                console.error('Unable to refresh distribution index.', err)
-                if(AssetGuard.getDistributionData() == null){
-                    setOverlayContent(
-                        'Fatal Error',
-                        'Could not load a copy of the distribution index. See the console for more details.',
-                        'Okay'
-                    )
-                    setOverlayHandler(null)
-    
-                    toggleOverlay(true)
-                    toggleLaunchArea(false)
-    
-                    // Disconnect from AssetExec
-                    aEx.disconnect()
-                } else {
-                    aEx.send({task: 0, content: 'validateDistribution', argsArr: [ConfigManager.getSelectedServer()]})
-                }
-            })
-        })
-
-    }
+        })*/
+    })
 }
 
 /**
@@ -1046,8 +1013,8 @@ function displayArticle(articleObject, index){
  */
 function loadNews(){
     return new Promise((resolve, reject) => {
-        const distroData = AssetGuard.getDistributionData()
-        const newsFeed = distroData['news_feed']
+        const distroData = DistroManager.getDistribution()
+        const newsFeed = distroData.getRSS()
         const newsHost = new URL(newsFeed).origin + '/'
         $.ajax(
         {

@@ -10,6 +10,10 @@ tracker.on('assetVal', (data) => {
     process.send({task: 0, total: data.total, value: data.acc, content: 'validateAssets'})
 })
 
+tracker.on('func', (data) => {
+    process.send({task: 0, content: data})
+})
+
 tracker.on('totaldlprogress', (data) => {
     process.send({task: 0, total: data.total, value: data.acc, percent: parseInt((data.acc/data.total)*100), content: 'dl'})
 })
