@@ -1,13 +1,8 @@
+const fs = require('fs')
 const path = require('path')
+const request = require('request')
 
-const Types = {
-    Library: 'Library',
-    ForgeHosted: 'ForgeHosted',
-    LiteLoader: 'LiteLoader',
-    ForgeMod: 'ForgeMod',
-    LiteMod: 'LiteMod',
-    File: 'File'
-}
+const ConfigManager = require('./configmanager')
 
 /**
  * Represents the download information
@@ -131,14 +126,14 @@ class Module {
      */
     static _resolveDefaultExtension(type){
         switch (type) {
-            case Types.Library:
-            case Types.ForgeHosted:
-            case Types.LiteLoader:
-            case Types.ForgeMod:
+            case exports.Types.Library:
+            case exports.Types.ForgeHosted:
+            case exports.Types.LiteLoader:
+            case exports.Types.ForgeMod:
                 return 'jar'
-            case Types.LiteMod:
+            case exports.Types.LiteMod:
                 return 'litemod'
-            case Types.File:
+            case exports.Types.File:
             default:
                 return 'jar' // There is no default extension really.
         }
@@ -179,16 +174,16 @@ class Module {
             const pth = path.join(...this.getGroup().split('.'), this.getID(), this.getVersion(), `${this.getID()}-${this.getVersion()}.${this.getExtension()}`)
             
             switch (this.type){
-                case Types.Library:
-                case Types.ForgeHosted:
-                case Types.LiteLoader:
+                case exports.Types.Library:
+                case exports.Types.ForgeHosted:
+                case exports.Types.LiteLoader:
                     this.artifact.path = path.join('libraries', pth)
                     break
-                case Types.ForgeMod:
-                case Types.LiteMod:
+                case exports.Types.ForgeMod:
+                case exports.Types.LiteMod:
                     this.artifact.path = path.join('modstore', pth)
                     break
-                case Types.File:
+                case exports.Types.File:
                 default:
                     this.artifact.path = pth
                     break
@@ -444,15 +439,101 @@ class DistroIndex {
         return this.servers
     }
 
+    /**
+     * Get a server configuration by its ID. If it does not
+     * exist, null will be returned.
+     * 
+     * @param {string} id The ID of the server.
+     * 
+     * @returns {Server} The server configuration with the given ID or null.
+     */
+    getServer(id){
+        for(let serv of this.servers){
+            if(serv.id === id){
+                return serv
+            }
+        }
+        return null
+    }
+
 }
 
-class DistroManager {
-    
+exports.Types = {
+    Library: 'Library',
+    ForgeHosted: 'ForgeHosted',
+    LiteLoader: 'LiteLoader',
+    ForgeMod: 'ForgeMod',
+    LiteMod: 'LiteMod',
+    File: 'File'
 }
 
-console.log(DistroIndex.fromJSON(JSON.parse(require('fs').readFileSync('../distribution.json', 'utf-8'))))
+let DEV_MODE = false
 
-module.exports = {
-    DistroManager,
-    Types
+const DISTRO_PATH = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
+const DEV_PATH = path.join(ConfigManager.getLauncherDirectory(), 'dev_distribution.json')
+
+let data = null
+
+exports.pullRemote = function(){
+    if(DEV_MODE){
+        return exports.pullLocal()
+    }
+    return new Promise((resolve, reject) => {
+        //const distroURL = 'http://mc.westeroscraft.com/WesterosCraftLauncher/distribution.json'
+        const distroURL = 'https://gist.githubusercontent.com/dscalzi/53b1ba7a11d26a5c353f9d5ae484b71b/raw/'
+        const opts = {
+            url: distroURL,
+            timeout: 2500
+        }
+        const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
+        request(opts, (error, resp, body) => {
+            if(!error){
+                data = DistroIndex.fromJSON(JSON.parse(body))
+
+                fs.writeFile(distroDest, body, 'utf-8', (err) => {
+                    if(!err){
+                        resolve(data)
+                    } else {
+                        reject(err)
+                    }
+                })
+            } else {
+                reject(error)
+            }
+        })
+    })
 }
+
+exports.pullLocal = function(){
+    return new Promise((resolve, reject) => {
+        fs.readFile(DEV_MODE ? DEV_PATH : DISTRO_PATH, 'utf-8', (err, d) => {
+            if(!err){
+                data = DistroIndex.fromJSON(JSON.parse(d))
+                resolve(data)
+            } else {
+                reject(err)
+            }
+        })
+    })
+}
+
+exports.setDevMode = function(value){
+    if(value){
+        console.log('%c[DistroManager]', 'color: #a02d2a; font-weight: bold', 'Developer mode enabled.')
+        console.log('%c[DistroManager]', 'color: #a02d2a; font-weight: bold', 'If you don\'t know what that means, revert immediately.')
+    } else {
+        console.log('%c[DistroManager]', 'color: #a02d2a; font-weight: bold', 'Developer mode disabled.')
+    }
+    DEV_MODE = value
+}
+
+exports.getDistribution = function(){
+    return data
+}
+
+/*async function debug(){
+    const d = await exports.pullRemote()
+    console.log(d)
+}
+debug()*/
+//console.log(DistroIndex.fromJSON(JSON.parse(require('fs').readFileSync('../distribution.json', 'utf-8'))))
