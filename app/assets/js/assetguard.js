@@ -12,13 +12,6 @@
  * assigned as the value of the identifier in the AssetGuard object. These download
  * trackers will remain idle until an async process is started to process them.
  * 
- * Once the async process is started, any enqueued assets will be downloaded. The AssetGuard
- * object will emit events throughout the download whose name correspond to the identifier
- * being processed. For example, if the 'assets' identifier was being processed, whenever
- * the download stream recieves data, the event 'assetsdlprogress' will be emitted off of
- * the AssetGuard instance. This can be listened to by external modules allowing for
- * categorical tracking of the downloading process.
- * 
  * @module assetguard
  */
 // Requirements
@@ -1391,7 +1384,7 @@ class AssetGuard extends EventEmitter {
                                                 h = h.substring(0, h.indexOf('/'))
                                             }
                                             const pos = path.join(dataDir, h)
-                                            self.emit('jExtracted', AssetGuard.javaExecFromRoot(pos))
+                                            self.emit('complete', 'java', AssetGuard.javaExecFromRoot(pos))
                                         })
                                     })
                                 

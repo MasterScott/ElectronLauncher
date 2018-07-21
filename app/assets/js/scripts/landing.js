@@ -277,8 +277,8 @@ function asyncSystemScan(launchAfter = true){
     })
     
     sysAEx.on('message', (m) => {
-        if(m.content === 'validateJava'){
 
+        if(m.context === 'validateJava'){
             if(m.result == null){
                 // If the result is null, no valid Java installation was found.
                 // Show this information to the user.
@@ -290,7 +290,7 @@ function asyncSystemScan(launchAfter = true){
                 )
                 setOverlayHandler(() => {
                     setLaunchDetails('Preparing Java Download..')
-                    sysAEx.send({task: 0, content: '_enqueueOracleJRE', argsArr: [ConfigManager.getLauncherDirectory()]})
+                    sysAEx.send({task: 'execute', function: '_enqueueOracleJRE', argsArr: [ConfigManager.getLauncherDirectory()]})
                     toggleOverlay(false)
                 })
                 setDismissHandler(() => {
@@ -330,14 +330,13 @@ function asyncSystemScan(launchAfter = true){
                 }
                 sysAEx.disconnect()
             }
-
-        } else if(m.content === '_enqueueOracleJRE'){
+        } else if(m.context === '_enqueueOracleJRE'){
 
             if(m.result === true){
 
                 // Oracle JRE enqueued successfully, begin download.
                 setLaunchDetails('Downloading Java..')
-                sysAEx.send({task: 0, content: 'processDlQueues', argsArr: [[{id:'java', limit:1}]]})
+                sysAEx.send({task: 'execute', function: 'processDlQueues', argsArr: [[{id:'java', limit:1}]]})
 
             } else {
 
@@ -357,58 +356,64 @@ function asyncSystemScan(launchAfter = true){
 
             }
 
-        } else if(m.content === 'dl'){
+        } else if(m.context === 'progress'){
 
-            if(m.task === 0){
-                // Downloading..
-                setDownloadPercentage(m.value, m.total, m.percent)
-            } else if(m.task === 1){
-                // Show installing progress bar.
-                remote.getCurrentWindow().setProgressBar(2)
-
-                // Wait for extration to complete.
-                const eLStr = 'Extracting'
-                let dotStr = ''
-                setLaunchDetails(eLStr)
-                extractListener = setInterval(() => {
-                    if(dotStr.length >= 3){
-                        dotStr = ''
-                    } else {
-                        dotStr += '.'
-                    }
-                    setLaunchDetails(eLStr + dotStr)
-                }, 750)
-
-            } else if(m.task === 2){
-
-                // Download & extraction complete, remove the loading from the OS progress bar.
-                remote.getCurrentWindow().setProgressBar(-1)
-
-                // Extraction completed successfully.
-                ConfigManager.setJavaExecutable(m.jPath)
-                ConfigManager.save()
-
-                if(extractListener != null){
-                    clearInterval(extractListener)
-                    extractListener = null
-                }
-
-                setLaunchDetails('Java Installed!')
-
-                if(launchAfter){
-                    dlAsync()
-                }
-
-                sysAEx.disconnect()
-            } else {
-                console.error('Unknown download data type.', m)
+            switch(m.data){
+                case 'download':
+                    // Downloading..
+                    setDownloadPercentage(m.value, m.total, m.percent)
+                    break
             }
+
+        } else if(m.context === 'complete'){
+
+            switch(m.data){
+                case 'download':
+                    // Show installing progress bar.
+                    remote.getCurrentWindow().setProgressBar(2)
+
+                    // Wait for extration to complete.
+                    const eLStr = 'Extracting'
+                    let dotStr = ''
+                    setLaunchDetails(eLStr)
+                    extractListener = setInterval(() => {
+                        if(dotStr.length >= 3){
+                            dotStr = ''
+                        } else {
+                            dotStr += '.'
+                        }
+                        setLaunchDetails(eLStr + dotStr)
+                    }, 750)
+                    break
+                case 'java':
+                    // Download & extraction complete, remove the loading from the OS progress bar.
+                    remote.getCurrentWindow().setProgressBar(-1)
+
+                    // Extraction completed successfully.
+                    ConfigManager.setJavaExecutable(m.args[0])
+                    ConfigManager.save()
+
+                    if(extractListener != null){
+                        clearInterval(extractListener)
+                        extractListener = null
+                    }
+
+                    setLaunchDetails('Java Installed!')
+
+                    if(launchAfter){
+                        dlAsync()
+                    }
+
+                    sysAEx.disconnect()
+                    break
+            }
+
         }
     })
 
     // Begin system Java scan.
     setLaunchDetails('Checking system info..')
-    sysAEx.send({task: 0, content: 'validateJava', argsArr: [ConfigManager.getLauncherDirectory()]})
+    sysAEx.send({task: 'execute', function: 'validateJava', argsArr: [ConfigManager.getLauncherDirectory()]})
 
 }
 
@@ -501,7 +506,7 @@ function dlAsync(login = true){
                     setLaunchPercentage(40+perc, 100, parseInt(40+perc))
                     break
                 case 'download':
-                    setDownloadPercentage(m.value, m.total, parseInt((m.value/m.total)*100))
+                    setDownloadPercentage(m.value, m.total, m.percent)
                     break
                 case 'extract':
                     // Show installing progress bar.

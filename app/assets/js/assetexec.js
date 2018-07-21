@@ -10,17 +10,13 @@ tracker.on('validate', (data) => {
     process.send({context: 'validate', data})
 })
 tracker.on('progress', (data, acc, total) => {
-    process.send({context: 'progress', data, value: acc, total})
+    process.send({context: 'progress', data, value: acc, total, percent: parseInt((acc/total)*100)})
 })
-tracker.on('complete', (data) => {
-    process.send({context: 'complete', data})
+tracker.on('complete', (data, ...args) => {
+    process.send({context: 'complete', data, args})
 })
 tracker.on('error', (data, error) => {
     process.send({context: 'error', data, error})
-})
-
-tracker.on('jExtracted', (jPath) => {
-    process.send({task: 2, content: 'dl', jPath})
 })
 
 process.on('message', (msg) => {
