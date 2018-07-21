@@ -602,7 +602,7 @@ function dlAsync(login = true){
                         if(servJoined.test(data)){
                             DiscordWrapper.updateDetails('Exploring the Realm!')
                         } else if(gameJoined.test(data)){
-                            DiscordWrapper.updateDetails('Idling on Main Menu')
+                            DiscordWrapper.updateDetails('Sailing to Westeros!')
                         }
                     }
 

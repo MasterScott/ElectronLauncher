@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "discord": {
-        "clientID": "385581240906022916",
+        "clientId": "385581240906022916",
         "smallImageText": "WesterosCraft",
         "smallImageKey": "seal-circle"
     },
@@ -15,7 +15,7 @@
             "name": "WesterosCraft Production Server",
             "description": "Main WesterosCraft server. Connect to enter the Realm.",
             "icon": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/server-prod.png",
-            "version": "3.7.2",
+            "version": "3.8.0",
             "address": "mc.westeroscraft.com",
             "minecraftVersion": "1.11.2",
             "discord": {
@@ -229,7 +229,7 @@
                     "artifact": {
                         "size": 1685422,
                         "MD5": "3a98b5ed95810bf164e71c1a53be568d",
-                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/1.11.2/liteloader-1.11.2.jar"
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/1.11.2/liteloader.jar"
                     },
                     "subModules": [
                         {
@@ -392,6 +392,17 @@
                     }
                 },
                 {
+                    "id": "com.sonicether:seus:11.0",
+                    "name": "Sonic Ether's Unbelievable Shaders (v11.0)",
+                    "type": "File",
+                    "artifact": {
+                        "size": 175159,
+                        "MD5": "bfa8c31d1da8131b59917bb2460205b1",
+                        "path": "shaderpacks/SEUS v11.0.zip",
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/prod-1.11.2/resourcepacks/SEUS.zip"
+                    }
+                },
+                {
                     "id": "options.txt",
                     "name": "Default Client Options",
                     "type": "File",
@@ -419,7 +430,7 @@
             "name": "WesterosCraft Test Server",
             "description": "Main testing server. Experimental changes are live here.",
             "icon": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/server-test.png",
-            "version": "3.7.1",
+            "version": "3.8.1",
             "address": "mc.westeroscraft.com:4444",
             "minecraftVersion": "1.11.2",
             "discord": {
@@ -623,6 +634,36 @@
                     ]
                 },
                 {
+                    "id": "com.mumfrey:liteloader:1.11.2",
+                    "name": "Liteloader (1.11.2)",
+                    "type": "LiteLoader",
+                    "required": {
+                        "value": false,
+                        "def": false
+                    },
+                    "artifact": {
+                        "size": 1685422,
+                        "MD5": "3a98b5ed95810bf164e71c1a53be568d",
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/1.11.2/liteloader.jar"
+                    },
+                    "subModules": [
+                        {
+                            "id": "com.mumfrey:macrokeybindmod:0.14.4-1.11.2@litemod",
+                            "name": "Macro/Keybind Mod (0.14.4-1.11.2)",
+                            "type": "LiteMod",
+                            "required": {
+                                "value": false,
+                                "def": false
+                            },
+                            "artifact": {
+                                "size": 1670811,
+                                "MD5": "16080785577b391d426c62c8d3138558",
+                                "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.11.2/mods/macrokeybindmod.litemod"
+                            }
+                        }
+                    ]
+                },
+                {
                     "id": "net.optifine:optifine:1.11.2_HD_U_C7",
                     "name": "Optifine (1.11.2_HD_U_C7)",
                     "type": "ForgeMod",
@@ -745,24 +786,35 @@
                     ]
                 },
                 {
-                    "id": "com.westeroscraft:westerosblocks:3.1.0-alpha-2-135",
-                    "name": "WesterosBlocks (3.1.0-alpha-2-135)",
+                    "id": "com.westeroscraft:westerosblocks:3.1.0-alpha-2-136",
+                    "name": "WesterosBlocks (3.1.0-alpha-2-136)",
                     "type": "ForgeMod",
                     "artifact": {
-                        "size": 16854431,
-                         "MD5": "ed5b2349d1ce2496895a5e8839b77f74",
+                        "size": 17352679,
+                         "MD5": "7a26b3f4f89bfe48f34c4fc95fc6437f",
                         "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.11.2/mods/WesterosBlocks.jar"
                     }
                 },
                 {
-                    "id": "com.westeroscraft:westeroscraftrp:2018-05-05",
-                    "name": "WesterosCraft Resource Pack (2018-05-05)",
+                    "id": "com.westeroscraft:westeroscraftrp:2018-07-21",
+                    "name": "WesterosCraft Resource Pack (2018-07-21)",
                     "type": "File",
                     "artifact": {
-                        "size": 46067606,
-                        "MD5": "0e08b0bcf44c9d266bfe067d865ffc1e",
+                        "size": 46942221,
+                        "MD5": "26e3e63a5778691eb3a9db11f449fdf1",
                         "path": "resourcepacks/WesterosCraft.zip",
                         "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.11.2/resourcepacks/WesterosCraft.zip"
+                    }
+                },
+                {
+                    "id": "com.sonicether:seus:11.0",
+                    "name": "Sonic Ether's Unbelievable Shaders (v11.0)",
+                    "type": "File",
+                    "artifact": {
+                        "size": 175159,
+                        "MD5": "bfa8c31d1da8131b59917bb2460205b1",
+                        "path": "shaderpacks/SEUS v11.0.zip",
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.11.2/resourcepacks/SEUS.zip"
                     }
                 },
                 {
@@ -793,7 +845,7 @@
             "name": "WesterosCraft 1.12.2 Test Server",
             "description": "Tests for our version change to 1.12.2 are live here.",
             "icon": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/server-test.png",
-            "version": "4.1.1",
+            "version": "4.2.0",
             "address": "mc.westeroscraft.com:4445",
             "minecraftVersion": "1.12.2",
             "discord": {
@@ -1007,6 +1059,36 @@
                     ]
                 },
                 {
+                    "id": "com.mumfrey:liteloader:1.12.2",
+                    "name": "Liteloader (1.12.2)",
+                    "type": "LiteLoader",
+                    "required": {
+                        "value": false,
+                        "def": false
+                    },
+                    "artifact": {
+                        "size": 1680383,
+                        "MD5": "1420785ecbfed5aff4a586c5c9dd97eb",
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/1.12.2/liteloader.jar"
+                    },
+                    "subModules": [
+                        {
+                            "id": "com.mumfrey:macrokeybindmod:0.15.4-1.12.1@litemod",
+                            "name": "Macro/Keybind Mod (0.15.4-1.12.1)",
+                            "type": "LiteMod",
+                            "required": {
+                                "value": false,
+                                "def": false
+                            },
+                            "artifact": {
+                                "size": 1726452,
+                                "MD5": "9ba3ed960bbb676743a3b6c2e1efc484",
+                                "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.12.2/mods/macrokeybindmod.litemod"
+                            }
+                        }
+                    ]
+                },
+                {
                     "id": "net.optifine:optifine:1.12.2_HD_U_D1",
                     "name": "Optifine (1.12.2_HD_U_D1)",
                     "type": "ForgeMod",
@@ -1134,6 +1216,17 @@
                         "MD5": "e23288afd457ca56ee744c76b0e2dbed",
                         "path": "resourcepacks/WesterosCraft.zip",
                         "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.12.2/resourcepacks/WesterosCraft.zip"
+                    }
+                },
+                {
+                    "id": "com.sonicether:seus:11.0",
+                    "name": "Sonic Ether's Unbelievable Shaders (v11.0)",
+                    "type": "File",
+                    "artifact": {
+                        "size": 175159,
+                        "MD5": "bfa8c31d1da8131b59917bb2460205b1",
+                        "path": "shaderpacks/SEUS v11.0.zip",
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/prod-1.11.2/resourcepacks/SEUS.zip"
                     }
                 },
                 {
