@@ -565,6 +565,10 @@ exports.setDevMode = function(value){
     DEV_MODE = value
 }
 
+exports.isDevMode = function(){
+    return DEV_MODE
+}
+
 /**
  * @returns {DistroIndex}
  */

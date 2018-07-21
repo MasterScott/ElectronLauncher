@@ -652,14 +652,13 @@ function dlAsync(login = true){
     refreshDistributionIndex(true, (data) => {
         onDistroRefresh(data)
         serv = data.getServer(ConfigManager.getSelectedServer())
-        aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+        aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()]})
     }, (err) => {
-        
-        serv = data.getServer(ConfigManager.getSelectedServer())
-        aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+        console.log(err)
         refreshDistributionIndex(false, (data) => {
             onDistroRefresh(data)
-            aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+            serv = data.getServer(ConfigManager.getSelectedServer())
+            aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()]})
         }, (err) => {
             console.error('Unable to refresh distribution index.', err)
             if(DistroManager.getDistribution() == null){
@@ -676,7 +675,8 @@ function dlAsync(login = true){
                 // Disconnect from AssetExec
                 aEx.disconnect()
             } else {
-                aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+                serv = data.getServer(ConfigManager.getSelectedServer())
+                aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()]})
             }
         })
     })

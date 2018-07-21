@@ -1117,7 +1117,7 @@ class AssetGuard extends EventEmitter {
                 const hash = value.hash
                 const assetName = path.join(hash.substring(0, 2), hash)
                 const urlName = hash.substring(0, 2) + "/" + hash
-                const ast = new Asset(key, hash, String(value.size), resourceURL + urlName, path.join(objectPath, assetName))
+                const ast = new Asset(key, hash, value.size, resourceURL + urlName, path.join(objectPath, assetName))
                 if(!AssetGuard._validateLocal(ast.to, 'sha1', ast.hash)){
                     dlSize += (ast.size*1)
                     assetDlQueue.push(ast)
@@ -1360,7 +1360,7 @@ class AssetGuard extends EventEmitter {
                             dataDir = path.join(dataDir, 'runtime', 'x64')
                             const name = combined.substring(combined.lastIndexOf('/')+1)
                             const fDir = path.join(dataDir, name)
-                            const jre = new Asset(name, null, resp.headers['content-length'], opts, fDir)
+                            const jre = new Asset(name, null, parseInt(resp.headers['content-length']), opts, fDir)
                             this.java = new DLTracker([jre], jre.size, (a, self) => {
                                 let h = null
                                 fs.createReadStream(a.to)
@@ -1454,59 +1454,91 @@ class AssetGuard extends EventEmitter {
      * @returns {boolean} True if the process began, otherwise false.
      */
     startAsyncProcess(identifier, limit = 5){
+
         const self = this
-        let acc = 0
-        const concurrentDlTracker = this[identifier]
-        const concurrentDlQueue = concurrentDlTracker.dlqueue.slice(0)
-        if(concurrentDlQueue.length === 0){
-            return false
-        } else {
-            console.log('DLQueue', concurrentDlQueue)
-            async.eachLimit(concurrentDlQueue, limit, (asset, cb) => {
-                let count = 0;
-                mkpath.sync(path.join(asset.to, ".."))
+        const dlTracker = this[identifier]
+        const dlQueue = dlTracker.dlqueue
+
+        if(dlQueue.length > 0){
+            console.log('DLQueue', dlQueue)
+
+            async.eachLimit(dlQueue, limit, (asset, cb) => {
+
+                mkpath.sync(path.join(asset.to, '..'))
+
                 let req = request(asset.from)
                 req.pause()
+
                 req.on('response', (resp) => {
+
                     if(resp.statusCode === 200){
+
+                        let doHashCheck = false
+                        const contentLength = parseInt(resp.headers['content-length'])
+
+                        if(contentLength !== asset.size){
+                            console.log(`WARN: Got ${contentLength} bytes for ${asset.id}: Expected ${asset.size}`)
+                            doHashCheck = true
+
+                            // Adjust download
+                            this.totaldlsize -= asset.size
+                            this.totaldlsize += contentLength
+                        }
+
                         let writeStream = fs.createWriteStream(asset.to)
                         writeStream.on('close', () => {
-                            //console.log('DLResults ' + asset.size + ' ' + count + ' ', asset.size === count)
-                            if(concurrentDlTracker.callback != null){
-                                concurrentDlTracker.callback.apply(concurrentDlTracker, [asset, self])
+                            if(dlTracker.callback != null){
+                                dlTracker.callback.apply(dlTracker, [asset, self])
                             }
+
+                            if(doHashCheck){
+                                const v = AssetGuard._validateLocal(asset.to, asset.type != null ? 'md5' : 'sha1', asset.hash)
+                                if(v){
+                                    console.log(`Hashes match for ${asset.id}, byte mismatch is an issue in the distro index.`)
+                                } else {
+                                    console.error(`Hashes do not match, ${asset.id} may be corrupted.`)
+                                }
+                            }
+
                             cb()
                         })
                         req.pipe(writeStream)
                         req.resume()
+
                     } else {
+
                         req.abort()
-                        const realFrom = typeof asset.from === 'object' ? asset.from.url : asset.from
-                        console.log('Failed to download ' + realFrom + '. Response code', resp.statusCode)
+                        console.log(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
                         self.progress += asset.size*1
                         self.emit('progress', 'download', self.progress, self.totaldlsize)
                         cb()
+
                     }
+
                 })
+
                 req.on('error', (err) => {
                     self.emit('error', 'download', err)
                 })
+
                 req.on('data', (chunk) => {
-                    count += chunk.length
                     self.progress += chunk.length
-                    acc += chunk.length
                     self.emit('progress', 'download', self.progress, self.totaldlsize)
                 })
+
             }, (err) => {
+
                 if(err){
                     console.log('An item in ' + identifier + ' failed to process');
                 } else {
                     console.log('All ' + identifier + ' have been processed successfully')
                 }
-                self.totaldlsize -= self[identifier].dlsize
-                self.progress -= self[identifier].dlsize
+
+                //self.totaldlsize -= dlTracker.dlsize
+                //self.progress -= dlTracker.dlsize
                 self[identifier] = new DLTracker([], 0)
-                if(self.totaldlsize === 0) {
+
+                if(self.progress >= self.totaldlsize) {
                     if(self.extractQueue.length > 0){
                         self.emit('progress', 'extract', 1, 1)
                         //self.emit('extracting')
@@ -1518,8 +1550,13 @@ class AssetGuard extends EventEmitter {
                         self.emit('complete', 'download')
                     }
                 }
+
             })
+
             return true
+
+        } else {
+            return false
         }
     }
 
@@ -1535,8 +1572,6 @@ class AssetGuard extends EventEmitter {
      */
     processDlQueues(identifiers = [{id:'assets', limit:20}, {id:'libraries', limit:5}, {id:'files', limit:5}, {id:'forge', limit:5}]){
         return new Promise((resolve, reject) => {
-            this.progress = 0;
-
             let shouldFire = true
 
             // Assign dltracking variables.
@@ -1562,9 +1597,10 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async validateEverything(serverid){
+    async validateEverything(serverid, dev = false){
 
         ConfigManager.load()
+        DistroManager.setDevMode(dev)
         const dI = await DistroManager.pullLocal()
 
         const server = dI.getServer(serverid)
@@ -1581,7 +1617,10 @@ class AssetGuard extends EventEmitter {
         this.emit('validate', 'libraries')
         await this.validateMiscellaneous(versionData)
         this.emit('validate', 'files')
+        console.log('hereeee')
         await this.processDlQueues()
+        console.log('here')
+        //this.emit('complete', 'download')
         const forgeData = await this.loadForgeData(server)
     
         return {

@@ -346,7 +346,8 @@ document.addEventListener('readystatechange', function(){
     if (document.readyState === 'complete'){
         if(rscShouldLoad){
             if(!fatalStartupError){
-                showMainUI()
+                const data = DistroManager.getDistribution()
+                showMainUI(data)
             } else {
                 showFatalStartupError()
             }
