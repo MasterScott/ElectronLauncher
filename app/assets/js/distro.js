@@ -54,6 +54,7 @@ class Artifact {
     }
 
 }
+exports.Artifact
 
 /**
  * Represents a the requirement status
@@ -100,6 +101,7 @@ class Required {
     }
 
 }
+exports.Required
 
 /**
  * Represents a module.
@@ -283,6 +285,7 @@ class Module {
     }
 
 }
+exports.Module
 
 /**
  * Represents a server configuration.
@@ -389,6 +392,7 @@ class Server {
     }
 
 }
+exports.Server
 
 /**
  * Represents the Distribution Index.
@@ -483,6 +487,7 @@ class DistroIndex {
     }
 
 }
+exports.DistroIndex
 
 exports.Types = {
     Library: 'Library',

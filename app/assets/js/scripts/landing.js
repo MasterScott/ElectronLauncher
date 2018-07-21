@@ -465,124 +465,110 @@ function dlAsync(login = true){
 
     // Establish communications between the AssetExec and current process.
     aEx.on('message', (m) => {
-        if(m.content === 'validateDistribution'){
 
-            setLaunchPercentage(20, 100)
-            console.log('Validated distibution index.')
-
-            setLaunchDetails('Loading version information..')
-
-        } else if(m.content === 'loadVersionData'){
-
-            setLaunchPercentage(40, 100)
-            console.log('Version data loaded.')
-
-            setLaunchDetails('Validating asset integrity..')
-
-        } else if(m.content === 'validateAssets'){
-
-            // Asset validation can *potentially* take longer, so let's track progress.
-            if(m.task === 0){
-                const perc = (m.value/m.total)*20
-                setLaunchPercentage(40+perc, 100, parseInt(40+perc))
-            } else {
-                setLaunchPercentage(60, 100)
-                console.log('Asset Validation Complete')
-
-                setLaunchDetails('Validating library integrity..')
+        if(m.context === 'validate'){
+            switch(m.data){
+                case 'distribution':
+                    setLaunchPercentage(20, 100)
+                    console.log('Validated distibution index.')
+                    setLaunchDetails('Loading version information..')
+                    break
+                case 'version':
+                    setLaunchPercentage(40, 100)
+                    console.log('Version data loaded.')
+                    setLaunchDetails('Validating asset integrity..')
+                    break
+                case 'assets':
+                    setLaunchPercentage(60, 100)
+                    console.log('Asset Validation Complete')
+                    setLaunchDetails('Validating library integrity..')
+                    break
+                case 'libraries':
+                    setLaunchPercentage(80, 100)
+                    console.log('Library validation complete.')
+                    setLaunchDetails('Validating miscellaneous file integrity..')
+                    break
+                case 'files':
+                    setLaunchPercentage(100, 100)
+                    console.log('File validation complete.')
+                    setLaunchDetails('Downloading files..')
+                    break
             }
+        } else if(m.context === 'progress'){
+            switch(m.data){
+                case 'assets':
+                    const perc = (m.value/m.total)*20
+                    setLaunchPercentage(40+perc, 100, parseInt(40+perc))
+                    break
+                case 'download':
+                    setDownloadPercentage(m.value, m.total, parseInt((m.value/m.total)*100))
+                    break
+                case 'extract':
+                    // Show installing progress bar.
+                    remote.getCurrentWindow().setProgressBar(2)
 
-        } else if(m.content === 'validateLibraries'){
-
-            setLaunchPercentage(80, 100)
-            console.log('Library validation complete.')
-
-            setLaunchDetails('Validating miscellaneous file integrity..')
-
-        } else if(m.content === 'validateMiscellaneous'){
-
-            setLaunchPercentage(100, 100)
-            console.log('File validation complete.')
-
-            setLaunchDetails('Downloading files..')
-
-        } else if(m.content === 'dl'){
-
-            if(m.task === 0){
-
-                setDownloadPercentage(m.value, m.total, m.percent)
-
-            } else if(m.task === 0.7){
-                
-                // Show installing progress bar.
-                remote.getCurrentWindow().setProgressBar(2)
-
-                // Download done, extracting.
-                const eLStr = 'Extracting libraries'
-                let dotStr = ''
-                setLaunchDetails(eLStr)
-                progressListener = setInterval(() => {
-                    if(dotStr.length >= 3){
-                        dotStr = ''
-                    } else {
-                        dotStr += '.'
+                    // Download done, extracting.
+                    const eLStr = 'Extracting libraries'
+                    let dotStr = ''
+                    setLaunchDetails(eLStr)
+                    progressListener = setInterval(() => {
+                        if(dotStr.length >= 3){
+                            dotStr = ''
+                        } else {
+                            dotStr += '.'
+                        }
+                        setLaunchDetails(eLStr + dotStr)
+                    }, 750)
+                    break
+            }
+        } else if(m.context === 'complete'){
+            switch(m.data){
+                case 'download':
+                    // Download and extraction complete, remove the loading from the OS progress bar.
+                    remote.getCurrentWindow().setProgressBar(-1)
+                    if(progressListener != null){
+                        clearInterval(progressListener)
+                        progressListener = null
                     }
-                    setLaunchDetails(eLStr + dotStr)
-                }, 750)
 
-            } else if(m.task === 0.9) {
-
-                console.error(m.err)
-                
-                if(m.err.code === 'ENOENT'){
-                    setOverlayContent(
-                        'Download Error',
-                        'Could not connect to the file server. Ensure that you are connected to the internet and try again.',
-                        'Okay'
-                    )
-                    setOverlayHandler(null)
-                } else {
-                    setOverlayContent(
-                        'Download Error',
-                        'Check the console for more details. Please try again.',
-                        'Okay'
-                    )
-                    setOverlayHandler(null)
-                }
-
-                remote.getCurrentWindow().setProgressBar(-1)
-                toggleOverlay(true)
-                toggleLaunchArea(false)
-
-                // Disconnect from AssetExec
-                aEx.disconnect()
-
-            } else if(m.task === 1){
-
-                // Download and extraction complete, remove the loading from the OS progress bar.
-                remote.getCurrentWindow().setProgressBar(-1)
-                if(progressListener != null){
-                    clearInterval(progressListener)
-                    progressListener = null
-                }
-
-                setLaunchDetails('Preparing to launch..')
-
-            } else {
-
-                console.error('Unknown download data type.', m)
-
+                    setLaunchDetails('Preparing to launch..')
+                    break
             }
+        } else if(m.context === 'error'){
+            switch(m.data){
+                case 'download':
+                    console.error(m.error)
+                    
+                    if(m.error.code === 'ENOENT'){
+                        setOverlayContent(
+                            'Download Error',
+                            'Could not connect to the file server. Ensure that you are connected to the internet and try again.',
+                            'Okay'
+                        )
+                        setOverlayHandler(null)
+                    } else {
+                        setOverlayContent(
+                            'Download Error',
+                            'Check the console for more details. Please try again.',
+                            'Okay'
+                        )
+                        setOverlayHandler(null)
+                    }
 
-        } else if(m.content === 'validateEverything'){
+                    remote.getCurrentWindow().setProgressBar(-1)
+                    toggleOverlay(true)
+                    toggleLaunchArea(false)
+
+                    // Disconnect from AssetExec
+                    aEx.disconnect()
+                    break
+            }
+        } else if(m.context === 'validateEverything'){
 
             forgeData = m.result.forgeData
             versionData = m.result.versionData
 
             if(login) {
-                //if(!(await AuthManager.validateSelected())){
-                    // 
-                //}
                 const authUser = ConfigManager.getSelectedAccount()
                 console.log('authu', authUser)
                 let pb = new ProcessBuilder(serv, versionData, forgeData, authUser)
@@ -661,16 +647,14 @@ function dlAsync(login = true){
     refreshDistributionIndex(true, (data) => {
         onDistroRefresh(data)
         serv = data.getServer(ConfigManager.getSelectedServer())
-        aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
-        //aEx.send({task: 0, content: 'validateDistribution', argsArr: [data.getServer(ConfigManager.getSelectedServer())]})
+        aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
     }, (err) => {
         
         serv = data.getServer(ConfigManager.getSelectedServer())
-        aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
-        /*refreshDistributionIndex(false, (data) => {
+        aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
+        refreshDistributionIndex(false, (data) => {
             onDistroRefresh(data)
-            aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
-            //aEx.send({task: 0, content: 'validateDistribution', argsArr: [data.getServer(ConfigManager.getSelectedServer())]})
+            aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
         }, (err) => {
             console.error('Unable to refresh distribution index.', err)
             if(DistroManager.getDistribution() == null){
@@ -687,10 +671,9 @@ function dlAsync(login = true){
                 // Disconnect from AssetExec
                 aEx.disconnect()
             } else {
-                aEx.send({task: 0, content: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
-                //aEx.send({task: 0, content: 'validateDistribution', argsArr: [DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer())]})
+                aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer()]})
             }
-        })*/
+        })
     })
 }
 

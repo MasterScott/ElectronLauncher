@@ -164,9 +164,6 @@ class DLTracker {
 
 }
 
-let distributionData = null
-let launchWithLocal = false
-
 /**
  * Central object class used for control flow. This object stores data about
  * categories of downloads. Each category is assigned an identifier with a 
@@ -206,11 +203,6 @@ class AssetGuard extends EventEmitter {
 
     // Static Utility Functions
     // #region
-
-    // Static General Resolve Functions
-    // #region
-
-    // #endregion
 
     // Static Hash Validation Functions
     // #region
@@ -1128,7 +1120,7 @@ class AssetGuard extends EventEmitter {
             //const objKeys = Object.keys(data.objects)
             async.forEachOfLimit(indexData.objects, 10, (value, key, cb) => {
                 acc++
-                self.emit('assetVal', {acc, total})
+                self.emit('progress', 'assets', acc, total)
                 const hash = value.hash
                 const assetName = path.join(hash.substring(0, 2), hash)
                 const urlName = hash.substring(0, 2) + "/" + hash
@@ -1499,26 +1491,23 @@ class AssetGuard extends EventEmitter {
                         const realFrom = typeof asset.from === 'object' ? asset.from.url : asset.from
                         console.log('Failed to download ' + realFrom + '. Response code', resp.statusCode)
                         self.progress += asset.size*1
-                        self.emit('totaldlprogress', {acc: self.progress, total: self.totaldlsize})
+                        self.emit('progress', 'download', self.progress, self.totaldlsize)
                         cb()
                     }
                 })
                 req.on('error', (err) => {
-                    self.emit('dlerror', err)
+                    self.emit('error', 'download', err)
                 })
                 req.on('data', (chunk) => {
                     count += chunk.length
                     self.progress += chunk.length
                     acc += chunk.length
-                    self.emit(identifier + 'dlprogress', acc)
-                    self.emit('totaldlprogress', {acc: self.progress, total: self.totaldlsize})
+                    self.emit('progress', 'download', self.progress, self.totaldlsize)
                 })
             }, (err) => {
                 if(err){
-                    self.emit(identifier + 'dlerror')
                     console.log('An item in ' + identifier + ' failed to process');
                 } else {
-                    self.emit(identifier + 'dlcomplete')
                     console.log('All ' + identifier + ' have been processed successfully')
                 }
                 self.totaldlsize -= self[identifier].dlsize
@@ -1526,13 +1515,14 @@ class AssetGuard extends EventEmitter {
                 self[identifier] = new DLTracker([], 0)
                 if(self.totaldlsize === 0) {
                     if(self.extractQueue.length > 0){
-                        self.emit('extracting')
+                        self.emit('progress', 'extract', 1, 1)
+                        //self.emit('extracting')
                         AssetGuard._extractPackXZ(self.extractQueue, self.javaexec).then(() => {
                             self.extractQueue = []
-                            self.emit('dlcomplete')
+                            self.emit('complete', 'download')
                         })
                     } else {
-                        self.emit('dlcomplete')
+                        self.emit('complete', 'download')
                     }
                 }
             })
@@ -1545,32 +1535,38 @@ class AssetGuard extends EventEmitter {
      * given, all identifiers will be initiated. Note that in order for files to be processed you need to run
      * the processing function corresponding to that identifier. If you run this function without processing
      * the files, it is likely nothing will be enqueued in the object and processing will complete
-     * immediately. Once all downloads are complete, this function will fire the 'dlcomplete' event on the
+     * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
      * global object instance.
      * 
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
     processDlQueues(identifiers = [{id:'assets', limit:20}, {id:'libraries', limit:5}, {id:'files', limit:5}, {id:'forge', limit:5}]){
-        this.progress = 0;
+        return new Promise((resolve, reject) => {
+            this.progress = 0;
 
-        let shouldFire = true
+            let shouldFire = true
 
-        // Assign dltracking variables.
-        this.totaldlsize = 0
-        this.progress = 0
-        for(let i=0; i<identifiers.length; i++){
-            this.totaldlsize += this[identifiers[i].id].dlsize
-        }
+            // Assign dltracking variables.
+            this.totaldlsize = 0
+            this.progress = 0
 
-        for(let i=0; i<identifiers.length; i++){
-            let iden = identifiers[i]
-            let r = this.startAsyncProcess(iden.id, iden.limit)
-            if(r) shouldFire = false
-        }
+            for(let iden of identifiers){
+                this.totaldlsize += this[iden.id].dlsize
+            }
 
-        if(shouldFire){
-            this.emit('dlcomplete')
-        }
+            this.once('complete', (data) => {
+                resolve()
+            })
+
+            for(let iden of identifiers){
+                let r = this.startAsyncProcess(iden.id, iden.limit)
+                if(r) shouldFire = false
+            }
+
+            if(shouldFire){
+                this.emit('complete', 'download')
+            }
+        })
     }
 
     async validateEverything(serverid){
@@ -1580,17 +1576,19 @@ class AssetGuard extends EventEmitter {
 
         const server = dI.getServer(serverid)
 
+        // Validate Everything
+
         await this.validateDistribution(server)
-        this.emit('func', 'validateDistribution')
+        this.emit('validate', 'distribution')
         const versionData = await this.loadVersionData(server.getMinecraftVersion())
-        this.emit('func', 'loadVersionData')
+        this.emit('validate', 'version')
         await this.validateAssets(versionData)
-        this.emit('func', 'validateAssets')
+        this.emit('validate', 'assets')
         await this.validateLibraries(versionData)
-        this.emit('func', 'validateLibraries')
+        this.emit('validate', 'libraries')
         await this.validateMiscellaneous(versionData)
-        this.emit('func', 'validateMiscellaneous')
-        this.processDlQueues()
+        this.emit('validate', 'files')
+        await this.processDlQueues()
         const forgeData = await this.loadForgeData(server)
     
         return {
