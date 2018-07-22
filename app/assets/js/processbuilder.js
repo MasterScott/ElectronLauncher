@@ -1,8 +1,5 @@
 const AdmZip                = require('adm-zip')
-const {Library}             = require('./assetguard.js')
 const child_process         = require('child_process')
-const ConfigManager         = require('./configmanager.js')
-const DistroManager         = require('./distro')
 const crypto                = require('crypto')
 const fs                    = require('fs')
 const mkpath                = require('mkdirp')
@@ -10,6 +7,10 @@ const os                    = require('os')
 const path                  = require('path')
 const rimraf                = require('rimraf')
 const {URL}                 = require('url')
+
+const { Library }             = require('./assetguard')
+const ConfigManager         = require('./configmanager')
+const DistroManager         = require('./distromanager')
 
 class ProcessBuilder {
 

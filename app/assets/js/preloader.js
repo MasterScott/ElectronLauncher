@@ -1,9 +1,10 @@
-const DistroManager = require('./distro')
-const ConfigManager = require('./configmanager')
 const {ipcRenderer} = require('electron')
 const os = require('os')
 const path = require('path')
 const rimraf = require('rimraf')
+
+const ConfigManager = require('./configmanager')
+const DistroManager = require('./distromanager')
 
 console.log('%c[Preloader]', 'color: #a02d2a; font-weight: bold', 'Loading..')
 

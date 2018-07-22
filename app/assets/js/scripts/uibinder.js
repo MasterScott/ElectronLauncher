@@ -4,9 +4,10 @@
  */
 // Requirements
 const path          = require('path')
-const AuthManager   = require('./assets/js/authmanager.js')
-const ConfigManager = require('./assets/js/configmanager.js')
-const DistroManager = require('./assets/js/distro')
+
+const AuthManager   = require('./assets/js/authmanager')
+const ConfigManager = require('./assets/js/configmanager')
+const DistroManager = require('./assets/js/distromanager')
 
 let rscShouldLoad = false
 let fatalStartupError = false

@@ -7,10 +7,10 @@ const crypto                  = require('crypto')
 const {URL}                   = require('url')
 
 // Internal Requirements
-const DiscordWrapper          = require('./assets/js/discordwrapper.js')
-const Mojang                  = require('./assets/js/mojang.js')
-const ProcessBuilder          = require('./assets/js/processbuilder.js')
-const ServerStatus            = require('./assets/js/serverstatus.js')
+const DiscordWrapper          = require('./assets/js/discordwrapper')
+const Mojang                  = require('./assets/js/mojang')
+const ProcessBuilder          = require('./assets/js/processbuilder')
+const ServerStatus            = require('./assets/js/serverstatus')
 
 // Launch Elements
 const launch_content          = document.getElementById('launch_content')
@@ -261,9 +261,7 @@ function asyncSystemScan(launchAfter = true){
     // Fork a process to run validations.
     sysAEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
         ConfigManager.getCommonDirectory(),
-        ConfigManager.getLauncherDirectory(),
-        ConfigManager.getJavaExecutable(),
-        ConfigManager.getInstanceDirectory()
+        ConfigManager.getJavaExecutable()
     ], {
         stdio: 'pipe'
     })
@@ -453,9 +451,7 @@ function dlAsync(login = true){
     // Start AssetExec to run validations and downloads in a forked process.
     aEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
         ConfigManager.getCommonDirectory(),
-        ConfigManager.getLauncherDirectory(),
-        ConfigManager.getJavaExecutable(),
-        ConfigManager.getInstanceDirectory()
+        ConfigManager.getJavaExecutable()
     ], {
         stdio: 'pipe'
     })

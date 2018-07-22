@@ -29,8 +29,8 @@ const request       = require('request')
 const tar           = require('tar-fs')
 const zlib          = require('zlib')
 
-const DistroManager = require('./distro')
 const ConfigManager = require('./configmanager')
+const DistroManager = require('./distromanager')
 
 // Constants
 const PLATFORM_MAP = {
@@ -173,12 +173,10 @@ class AssetGuard extends EventEmitter {
      * values. Each identifier is resolved to an empty DLTracker.
      * 
      * @param {string} commonPath The common path for shared game files.
-     * @param {string} launcherPath The root launcher directory.
      * @param {string} javaexec The path to a java executable which will be used
      * to finalize installation.
-     * @param {string} instancePath The path to the instances directory.
      */
-    constructor(commonPath, launcherPath, javaexec, instancePath){
+    constructor(commonPath, javaexec){
         super()
         this.totaldlsize = 0
         this.progress = 0
@@ -189,9 +187,7 @@ class AssetGuard extends EventEmitter {
         this.java = new DLTracker([], 0)
         this.extractQueue = []
         this.commonPath = commonPath
-        this.launcherPath = launcherPath
         this.javaexec = javaexec
-        this.instancePath = instancePath
     }
 
     // Static Utility Functions
@@ -1599,7 +1595,9 @@ class AssetGuard extends EventEmitter {
 
     async validateEverything(serverid, dev = false){
 
-        ConfigManager.load()
+        if(!ConfigManager.isLoaded()){
+            ConfigManager.load()
+        }
         DistroManager.setDevMode(dev)
         const dI = await DistroManager.pullLocal()
 

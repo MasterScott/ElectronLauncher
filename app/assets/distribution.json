@@ -399,7 +399,7 @@
                         "size": 175159,
                         "MD5": "bfa8c31d1da8131b59917bb2460205b1",
                         "path": "shaderpacks/SEUS v11.0.zip",
-                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/prod-1.11.2/resourcepacks/SEUS.zip"
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/prod-1.11.2/shaderpacks/SEUS.zip"
                     }
                 },
                 {
@@ -814,7 +814,7 @@
                         "size": 175159,
                         "MD5": "bfa8c31d1da8131b59917bb2460205b1",
                         "path": "shaderpacks/SEUS v11.0.zip",
-                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.11.2/resourcepacks/SEUS.zip"
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.11.2/shaderpacks/SEUS.zip"
                     }
                 },
                 {
@@ -845,7 +845,7 @@
             "name": "WesterosCraft 1.12.2 Test Server",
             "description": "Tests for our version change to 1.12.2 are live here.",
             "icon": "http://mc.westeroscraft.com/WesterosCraftLauncher/files/server-test.png",
-            "version": "4.2.0",
+            "version": "4.2.1",
             "address": "mc.westeroscraft.com:4445",
             "minecraftVersion": "1.12.2",
             "discord": {
@@ -1198,22 +1198,22 @@
                     ]
                 },
                 {
-                    "id": "com.westeroscraft:westerosblocks:3.1.0-alpha-2-8",
-                    "name": "WesterosBlocks (3.1.0-alpha-2-8)",
+                    "id": "com.westeroscraft:westerosblocks:3.1.0-alpha-2-10",
+                    "name": "WesterosBlocks (3.1.0-alpha-2-10)",
                     "type": "ForgeMod",
                     "artifact": {
-                        "size": 16771714,
-                         "MD5": "bb5f1d262c0fd96f1bddea40a69da956",
+                        "size": 17261877,
+                         "MD5": "f23568619e6fc2bf0cdbdcc05b6a8af9",
                         "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.12.2/mods/WesterosBlocks.jar"
                     }
                 },
                 {
-                    "id": "com.westeroscraft:westeroscraftrp:2018-05-05",
-                    "name": "WesterosCraft Resource Pack (2018-05-05)",
+                    "id": "com.westeroscraft:westeroscraftrp:2018-07-21",
+                    "name": "WesterosCraft Resource Pack (2018-07-21)",
                     "type": "File",
                     "artifact": {
-                        "size": 46070075,
-                        "MD5": "e23288afd457ca56ee744c76b0e2dbed",
+                        "size": 46944689,
+                        "MD5": "caa806fb84e56c6c230e56b17670f2bc",
                         "path": "resourcepacks/WesterosCraft.zip",
                         "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.12.2/resourcepacks/WesterosCraft.zip"
                     }
@@ -1226,7 +1226,7 @@
                         "size": 175159,
                         "MD5": "bfa8c31d1da8131b59917bb2460205b1",
                         "path": "shaderpacks/SEUS v11.0.zip",
-                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/prod-1.11.2/resourcepacks/SEUS.zip"
+                        "url": "http://mc.westeroscraft.com/WesterosCraftLauncher/test-1.12.2/shaderpacks/SEUS.zip"
                     }
                 },
                 {
