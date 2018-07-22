@@ -236,6 +236,7 @@ The format of the module's artifact depends on several things. The most importan
 Other times, you may want to store the files maven-style, such as with libraries and mods. In this case you must declare the module as the example artifact above. The module `id` will be used to resolve the final path, effectively replacing the `path` property. It must be provided in maven format. More information on this is provided in the documentation for the `id` property.
 
 The resolved/provided paths are appended to a base path depending on the module's declared type.
+
 | Type | Path |
 | ---- | ---- |
 | `ForgeHosted` | ({`commonDirectory`}/libraries/{`path` OR resolved}) |
